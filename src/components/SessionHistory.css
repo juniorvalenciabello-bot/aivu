@@ -1,0 +1,130 @@
+.history-container {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.history-header h1 {
+  font-size: 2.2rem;
+  margin-bottom: 8px;
+}
+
+.history-header p {
+  color: var(--text-dim);
+}
+
+.stats-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.stat-summary-card {
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.session-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.session-card {
+  padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: transform 0.3s ease, border-color 0.3s ease;
+  cursor: pointer;
+}
+
+.session-card:hover {
+  transform: translateX(5px);
+  border-color: rgba(0, 242, 255, 0.2);
+}
+
+.session-main {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.session-date-icon {
+  width: 48px;
+  height: 48px;
+  background: rgba(0, 242, 255, 0.05);
+  border: 1px solid rgba(0, 242, 255, 0.1);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.session-details h3 {
+  font-size: 1.1rem;
+  margin-bottom: 4px;
+}
+
+.session-meta {
+  display: flex;
+  gap: 20px;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+
+.session-meta span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.session-stats {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.accuracy-badge {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+}
+
+.accuracy-label {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.accuracy-value {
+  font-weight: 800;
+  font-size: 1.25rem;
+  color: var(--accent-cyan);
+}
