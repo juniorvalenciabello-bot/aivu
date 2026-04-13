@@ -43,12 +43,12 @@ export const SessionProvider = ({ children }) => {
         .select();
 
       if (error) {
-        window.alert("Error de Supabase: " + error.message);
+        console.error("Error de Supabase: " + error.message);
         throw error;
       }
       if (data && data.length > 0) {
         setSessions(prev => [data[0], ...prev]);
-        window.alert("¡Sesión Guardada en la Nube con Éxito!");
+        // Silently sync in background - no alert
       }
     } catch (err) {
       console.error("Error adding session:", err);

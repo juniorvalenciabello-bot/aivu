@@ -4,7 +4,7 @@ import { Target, Zap, ShieldCheck, ShieldAlert, Cpu, Award } from 'lucide-react'
 import { useSessions } from '../context/SessionContext';
 import './FeedbackPanel.css';
 
-const FeedbackPanel = ({ active, exercise }) => {
+const FeedbackPanel = ({ active, exercise, onGoalReached }) => {
   const { addSession } = useSessions();
   const [analysis, setAnalysis] = useState({
     angle: 0,
@@ -16,6 +16,8 @@ const FeedbackPanel = ({ active, exercise }) => {
   });
 
   const [repAnim, setRepAnim] = useState(false);
+  const [goalMet, setGoalMet] = useState(false);
+  const targetReps = exercise?.target_reps || exercise?.targetReps || 10;
   
   // Guardamos referencias para cuando el componente se desmonte o pare la sesión
   const startTimeRef = useRef(null);
@@ -23,15 +25,35 @@ const FeedbackPanel = ({ active, exercise }) => {
 
   useEffect(() => {
     analysisRef.current = analysis;
-  }, [analysis]);
+    
+    // Check auto-completion goal
+    if (active && analysis.reps >= targetReps && !goalMet) {
+      setGoalMet(true);
+      // Play a success sound
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.2);
+        osc.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.3);
+      } catch (e) {}
+
+      // Slight delay to let the user see the 10th rep hit, then close and sync
+      setTimeout(() => {
+        if (onGoalReached) onGoalReached();
+      }, 1500);
+    }
+  }, [analysis, active, targetReps, goalMet, onGoalReached]);
 
   useEffect(() => {
     if (!active) {
-      // Si venimos de una sesión activa (había un startTime)
-      if (startTimeRef.current) {
+      if (startTimeRef.current && analysisRef.current.reps > 0) {
         const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
         
-        // Guardar la sesión SIEMPRE, sin importar la duración
+        // Guardar la sesión automática en la nube
         addSession({
           exercise_name: exercise?.name || 'Ejercicio Desconocido',
           duration_seconds: duration,
@@ -42,6 +64,7 @@ const FeedbackPanel = ({ active, exercise }) => {
       
       resetReps();
       startTimeRef.current = null;
+      setGoalMet(false);
       return;
     }
 
@@ -94,9 +117,13 @@ const FeedbackPanel = ({ active, exercise }) => {
       </div>
 
       <div className="rep-counter-container">
-        <div className={`rep-badge glass ${repAnim ? 'rep-pulse' : ''}`}>
+        <div className={`rep-badge glass ${repAnim ? 'rep-pulse' : ''} ${goalMet ? 'goal-success' : ''}`}>
           <span className="rep-label">Repeticiones</span>
-          <span className="rep-value">{analysis.reps}</span>
+          <div className="rep-fraction">
+            <span className="rep-value">{analysis.reps}</span>
+            <span className="rep-target">/ {targetReps}</span>
+          </div>
+          {goalMet && <div className="success-badge">¡Meta Alcanzada! Guardando...</div>}
         </div>
       </div>
 
@@ -164,7 +191,11 @@ const FeedbackPanel = ({ active, exercise }) => {
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .rep-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; color: var(--text-dim); }
+        .rep-fraction { display: flex; align-items: baseline; gap: 8px; }
         .rep-value { font-size: 4rem; font-weight: 900; color: var(--accent-cyan); text-shadow: var(--neon-glow-cyan); }
+        .rep-target { font-size: 1.5rem; font-weight: 600; color: var(--text-dim); opacity: 0.5; }
+        .success-badge { margin-top: 10px; color: #00ff88; font-weight: bold; background: rgba(0, 255, 136, 0.1); padding: 4px 12px; border-radius: 20px; animation: pulse 1s infinite; }
+        .goal-success { border-color: #00ff88; box-shadow: 0 0 30px rgba(0, 255, 136, 0.2); }
         .rep-pulse {
           transform: scale(1.1);
           border-color: var(--accent-cyan);

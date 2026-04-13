@@ -12,6 +12,7 @@ const ExerciseLibrary = () => {
     target_joint: 'ELBOW',
     min_angle: 45,
     max_angle: 150,
+    target_reps: 10,
     type: 'ARM',
     description: ''
   });
@@ -20,7 +21,7 @@ const ExerciseLibrary = () => {
     e.preventDefault();
     await addExercise(newExercise);
     setShowAddForm(false);
-    setNewExercise({ name: '', target_joint: 'ELBOW', min_angle: 45, max_angle: 150, type: 'ARM', description: '' });
+    setNewExercise({ name: '', target_joint: 'ELBOW', min_angle: 45, max_angle: 150, target_reps: 10, type: 'ARM', description: '' });
   };
 
   const filteredExercises = exercises.filter(ex => 
@@ -110,6 +111,18 @@ const ExerciseLibrary = () => {
                   />
                 </div>
               </div>
+              <div className="input-row">
+                <div className="input-field" style={{ width: '100%' }}>
+                  <label>Meta de Repeticiones</label>
+                  <input 
+                    type="number" 
+                    min="1"
+                    placeholder="Ej: 10"
+                    value={newExercise.target_reps}
+                    onChange={(e) => setNewExercise({...newExercise, target_reps: parseInt(e.target.value)})}
+                  />
+                </div>
+              </div>
               <div className="modal-buttons">
                 <button type="button" className="nav-item" onClick={() => setShowAddForm(false)}>Cancelar</button>
                 <button type="submit" className="neon-btn">Crear en la Nube</button>
@@ -150,6 +163,10 @@ const ExerciseLibrary = () => {
               <div className="joint-info">
                 <Info size={16} color="var(--text-dim)" />
                 <span>Base: {ex.target_joint || ex.targetJoint}</span>
+              </div>
+              <div className="joint-info">
+                <Activity size={16} color="var(--accent-purple)" />
+                <span>Meta: {ex.target_reps || 10} reps</span>
               </div>
             </div>
             {selectedExercise?.id === ex.id && (

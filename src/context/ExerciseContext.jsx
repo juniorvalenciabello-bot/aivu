@@ -49,10 +49,14 @@ export const ExerciseProvider = ({ children }) => {
         .insert({ ...exercise, user_id: user.id })
         .select();
 
-      if (error) throw error;
+      if (error) {
+        window.alert("Error de Supabase: " + error.message);
+        throw error;
+      }
       setExercises([...exercises, ...data]);
     } catch (err) {
       console.error("Error adding exercise:", err);
+      window.alert("No se pudo guardar el ejercicio. Revisa la consola o la base de datos.");
     }
   };
 

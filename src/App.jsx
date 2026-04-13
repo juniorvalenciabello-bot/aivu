@@ -39,7 +39,11 @@ function App() {
               <CameraView active={sessionActive} />
             </div>
             <div className="grid-right">
-              <FeedbackPanel active={sessionActive} exercise={selectedExercise} />
+              <FeedbackPanel 
+                active={sessionActive} 
+                exercise={selectedExercise} 
+                onGoalReached={() => setSessionActive(false)}
+              />
             </div>
           </>
         );

@@ -1,39 +1,48 @@
 /**
  * Posture analysis utilities for aivU 2.0
- * Includes Repetition Counting and Exercise-Awareness (Snake Case for DB)
+ * Includes Repetition Counting, Exercise-Awareness, and Cloud Analytics Precision
  */
 
 /**
- * Calculates the angle between three 3D points
+ * Calculates the 2D angle between three points to avoid 3D depth jitter
  */
 export const calculateAngle = (a, b, c) => {
   if (!a || !b || !c) return 0;
-  const ab = { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z };
-  const cb = { x: c.x - b.x, y: c.y - b.y, z: c.z - b.z };
-  const dotProduct = ab.x * cb.x + ab.y * cb.y + ab.z * cb.z;
-  const magAB = Math.sqrt(ab.x * ab.x + ab.y * ab.y + ab.z * ab.z);
-  const magCB = Math.sqrt(cb.x * cb.x + cb.y * cb.y + cb.z * cb.z);
-  const angleRad = Math.acos(Math.max(-1, Math.min(1, dotProduct / (magAB * magCB))));
-  return (angleRad * 180.0) / Math.PI;
+  // Ignore Z (depth) for more stable 2D angle calculation on the camera plane
+  const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+  let angle = Math.abs((radians * 180.0) / Math.PI);
+  
+  if (angle > 180.0) {
+    angle = 360.0 - angle;
+  }
+  return angle;
 };
 
-// State for repetition counting
+// State for repetition counting and smoothing
 let repState = 'START'; // START, MID
 let repCount = 0;
+let lastRepTime = 0;
+const REP_COOLDOWN_MS = 500; // Mínimo medio segundo por repetición
+
+// Variables para el filtro Exponential Moving Average (EMA)
+let smoothedAngle = null;
+const SMOOTHING_FACTOR = 0.2; // Menor = más suave pero con un ligero retraso
 
 /**
- * Resets the repetition counter
+ * Resets the repetition counter and state
  */
 export const resetReps = () => {
   repCount = 0;
   repState = 'START';
+  smoothedAngle = null;
+  lastRepTime = 0;
 };
 
 /**
  * Analyzes posture based on the selected exercise
  */
 export const analyzePosture = (landmarks, exercise) => {
-  if (!landmarks || !exercise) return { status: 'idle', message: 'Esperando detección...', reps: repCount };
+  if (!landmarks || !exercise) return { status: 'idle', message: 'Esperando detección...', reps: repCount, progress: 0, angle: 0, confidence: 0 };
 
   // Map of joint indices
   const JOINTS = {
@@ -47,7 +56,7 @@ export const analyzePosture = (landmarks, exercise) => {
 
   let jointA, jointB, jointC;
   
-  // Dynamic joint selection based on exercise (using database fields: target_joint)
+  // Dynamic joint selection based on exercise
   const targetJoint = exercise.target_joint || exercise.targetJoint;
 
   switch (targetJoint) {
@@ -72,33 +81,48 @@ export const analyzePosture = (landmarks, exercise) => {
       jointC = landmarks[JOINTS.WRIST_L];
   }
 
-  const currentAngle = calculateAngle(jointA, jointB, jointC);
+  const rawAngle = calculateAngle(jointA, jointB, jointC);
   const confidence = jointB?.visibility || 0;
 
-  // Repetition Counting Logic (State Machine)
+  // EMA Filter: Suavizado de vibraciones y ruido de la cámara
+  if (smoothedAngle === null) {
+    smoothedAngle = rawAngle;
+  } else {
+    smoothedAngle = (rawAngle * SMOOTHING_FACTOR) + (smoothedAngle * (1 - SMOOTHING_FACTOR));
+  }
+
+  // Repetition Counting Logic (State Machine con Cooldown)
   const minAngle = exercise.min_angle || exercise.minAngle || 45;
   const maxAngle = exercise.max_angle || exercise.maxAngle || 150;
 
   const thresholdEnd = maxAngle - 10;
   const thresholdStart = minAngle + 10;
+  
+  const now = Date.now();
 
-  if (repState === 'START' && currentAngle < thresholdStart) {
+  if (repState === 'START' && smoothedAngle < thresholdStart) {
     repState = 'MID';
-  } else if (repState === 'MID' && currentAngle > thresholdEnd) {
-    repState = 'START';
-    repCount++;
-    window.dispatchEvent(new CustomEvent('rep-complete', { detail: repCount }));
+  } else if (repState === 'MID' && smoothedAngle > thresholdEnd) {
+    if (now - lastRepTime > REP_COOLDOWN_MS) {
+      repState = 'START';
+      repCount++;
+      lastRepTime = now;
+      window.dispatchEvent(new CustomEvent('rep-complete', { detail: repCount }));
+    }
   }
 
   // Quality check
-  const isCorrect = currentAngle >= minAngle && currentAngle <= maxAngle;
+  const isCorrect = smoothedAngle >= minAngle && smoothedAngle <= maxAngle;
+  
+  // Progress Calculation
+  const progress = Math.min(100, Math.max(0, ((smoothedAngle - minAngle) / (maxAngle - minAngle)) * 100));
 
   return {
-    angle: Math.round(currentAngle),
+    angle: Math.round(smoothedAngle),
     confidence: Math.round(confidence * 100),
     reps: repCount,
     status: isCorrect ? 'correct' : 'warning',
     message: isCorrect ? '¡Excelente forma!' : 'Ajusta el rango de movimiento',
-    progress: Math.min(100, Math.max(0, ((currentAngle - minAngle) / (maxAngle - minAngle)) * 100))
+    progress: progress
   };
 };
